@@ -1,0 +1,19 @@
+.DS_Store
+
+# Local scratch and downloaded artifacts
+temp_download/
+page-*.png
+
+# Private reference materials kept locally only
+references/books/
+references/extracts/
+references/previews/
+
+# Editor and OS noise
+.idea/
+.vscode/
+
+# Secrets and local environment
+.env
+.env.*
+*.local

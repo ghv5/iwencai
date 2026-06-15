@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>交易计划与仓位计算器</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --panel: rgba(255, 250, 243, 0.92);
+      --line: rgba(91, 63, 45, 0.18);
+      --ink: #2f241e;
+      --muted: #74655c;
+      --accent: #b55d31;
+      --accent-2: #1f6a5c;
+      --danger: #af2f2f;
+      --shadow: 0 22px 60px rgba(73, 47, 32, 0.12);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(181, 93, 49, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(31, 106, 92, 0.14), transparent 30%),
+        linear-gradient(180deg, #f8f3ec 0%, var(--bg) 100%);
+      padding: 12px;
+    }
+
+    .shell {
+      max-width: 430px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .left {
+      padding: 18px;
+      height: fit-content;
+    }
+
+    .right {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .top-summary {
+      position: static;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 21px;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px 13px;
+      font-size: 15px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    input:focus {
+      border-color: rgba(181, 93, 49, 0.55);
+      transform: translateY(-1px);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .hint {
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .metric .k {
+      color: var(--muted);
+      font-size: 10px;
+      margin-bottom: 5px;
+    }
+
+    .metric .v {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: 0.01em;
+    }
+
+    .metric .s {
+      margin-top: 6px;
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .accent {
+      border-color: rgba(181, 93, 49, 0.2);
+      background: linear-gradient(180deg, rgba(181, 93, 49, 0.1), rgba(255, 255, 255, 0.88));
+    }
+
+    .green {
+      border-color: rgba(31, 106, 92, 0.2);
+      background: linear-gradient(180deg, rgba(31, 106, 92, 0.1), rgba(255, 255, 255, 0.88));
+    }
+
+    .danger {
+      border-color: rgba(175, 47, 47, 0.2);
+      background: linear-gradient(180deg, rgba(175, 47, 47, 0.1), rgba(255, 255, 255, 0.88));
+    }
+
+    .panel-title {
+      font-size: 15px;
+      margin: 0 0 10px;
+    }
+
+    .rule-list,
+    .timeline {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.74);
+      align-items: center;
+    }
+
+    .row .label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .row .value {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .timeline .row {
+      grid-template-columns: 1fr;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(181, 93, 49, 0.12);
+      color: var(--accent);
+    }
+
+    .footnote {
+      font-size: 10px;
+      line-height: 1.65;
+      color: var(--muted);
+      padding: 12px 13px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    @media (min-width: 760px) {
+      body {
+        padding: 28px;
+      }
+
+      .shell {
+        max-width: 1100px;
+        grid-template-columns: 400px 1fr;
+        gap: 24px;
+      }
+
+      .left {
+        position: sticky;
+        top: 28px;
+        padding: 28px;
+      }
+
+      .right {
+        padding: 28px;
+        gap: 18px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .sub {
+        margin-bottom: 24px;
+      }
+
+      .summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric {
+        padding: 18px;
+      }
+
+      .metric .v {
+        font-size: 28px;
+      }
+
+      .panel-title {
+        font-size: 18px;
+        margin-bottom: 14px;
+      }
+
+      .row {
+        grid-template-columns: 190px 1fr;
+        padding: 14px 16px;
+      }
+
+      .timeline .row {
+        grid-template-columns: 120px 1fr;
+      }
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding: 10px;
+      }
+
+      .left,
+      .right {
+        padding: 16px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      .metric .v {
+        font-size: 17px;
+      }
+
+      input {
+        font-size: 14px;
+      }
+
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="card left">
+      <h1>交易计划与仓位计算</h1>
+      <p class="sub">
+        这版严格按书里的顺序：先输入 <strong>买入价、止损价、目标价</strong>，再按
+        <strong>2% 单笔风险</strong> 反推可买股数，不再由页面替你自动编止损和止盈。
+      </p>
+
+      <div class="grid">
+        <div class="field">
+          <label for="buyPrice">买入价格</label>
+          <input id="buyPrice" type="number" min="0" step="0.01" value="20.00" />
+        </div>
+
+        <div class="split">
+          <div class="field">
+            <label for="stopPrice">止损价格</label>
+            <input id="stopPrice" type="number" min="0" step="0.01" value="19.20" />
+          </div>
+
+          <div class="field">
+            <label for="targetPrice">目标价格</label>
+            <input id="targetPrice" type="number" min="0" step="0.01" value="22.40" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="capital">总资本</label>
+          <input id="capital" type="number" min="0" step="1" value="100000" />
+        </div>
+
+        <div class="split">
+          <div class="field">
+            <label for="riskPct">单笔风险比例</label>
+            <input id="riskPct" type="number" min="0.1" step="0.1" value="2" />
+          </div>
+
+          <div class="field">
+            <label for="lotSize">每手股数</label>
+            <input id="lotSize" type="number" min="1" step="1" value="100" />
+          </div>
+        </div>
+
+        <p class="hint">
+          书里的核心顺序是：先定交易计划，再算仓位。输入项必须先有买入价、止损价、目标价，
+          页面才会给出可买股数、实际总风险和收益风险比。
+        </p>
+      </div>
+    </section>
+
+    <section class="card right">
+      <div class="top-summary">
+        <div class="summary">
+          <div class="metric accent">
+            <div class="k">建议买入股数</div>
+            <div class="v" id="sharesOut">0 股</div>
+            <div class="s" id="positionCostOut">占用资金 0</div>
+          </div>
+          <div class="metric danger">
+            <div class="k">实际总风险</div>
+            <div class="v" id="riskOut">0.00</div>
+            <div class="s" id="stopOut">单股风险 0.00 / 止损价 0.00</div>
+          </div>
+          <div class="metric green">
+            <div class="k">收益风险比</div>
+            <div class="v" id="rrOut">--</div>
+            <div class="s" id="targetOut">目标价 0.00 / 单股收益 0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="panel-title">执行结果</h2>
+        <div class="rule-list">
+          <div class="row">
+            <div class="label">可承受最大亏损</div>
+            <div class="value" id="maxLossOut">0.00</div>
+          </div>
+          <div class="row">
+            <div class="label">风险约束下可买股数</div>
+            <div class="value" id="riskSharesOut">0 股</div>
+          </div>
+          <div class="row">
+            <div class="label">资金约束下可买股数</div>
+            <div class="value" id="capitalSharesOut">0 股</div>
+          </div>
+          <div class="row">
+            <div class="label">计划是否合格</div>
+            <div class="value" id="planOut">等待输入有效参数</div>
+          </div>
+          <div class="row">
+            <div class="label">最终建议</div>
+            <div class="value" id="decisionOut">等待输入有效参数</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="panel-title">计划检查</h2>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="footnote">
+        <span class="tag">说明</span>
+        这页工具只做书里最硬的那一层：先有交易计划，再算仓位。页面不再自动生成止损百分比、
+        也不再替你安排移动止盈路线。止损价和目标价必须先由你的交易计划决定。
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const ids = [
+      "buyPrice",
+      "stopPrice",
+      "targetPrice",
+      "capital",
+      "riskPct",
+      "lotSize"
+    ];
+
+    const els = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+
+    const fmtMoney = (n) =>
+      Number.isFinite(n)
+        ? n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "--";
+
+    const fmtPrice = (n) =>
+      Number.isFinite(n)
+        ? n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : "--";
+
+    const floorLot = (shares, lot) => {
+      if (!Number.isFinite(shares) || !Number.isFinite(lot) || shares <= 0 || lot <= 0) return 0;
+      return Math.floor(shares / lot) * lot;
+    };
+
+    function timelineRow(stage, detail) {
+      return `
+        <div class="row">
+          <div class="label">${stage}</div>
+          <div class="value">${detail}</div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const buyPrice = Number(els.buyPrice.value);
+      const stopPrice = Number(els.stopPrice.value);
+      const targetPrice = Number(els.targetPrice.value);
+      const capital = Number(els.capital.value);
+      const riskPct = Number(els.riskPct.value) / 100;
+      const lotSize = Number(els.lotSize.value);
+
+      const valid =
+        Number.isFinite(buyPrice) && buyPrice > 0 &&
+        Number.isFinite(stopPrice) && stopPrice > 0 &&
+        Number.isFinite(targetPrice) && targetPrice > 0 &&
+        Number.isFinite(capital) && capital > 0 &&
+        Number.isFinite(riskPct) && riskPct > 0 &&
+        Number.isFinite(lotSize) && lotSize > 0;
+
+      if (!valid) {
+        document.getElementById("sharesOut").textContent = "0 股";
+        document.getElementById("positionCostOut").textContent = "占用资金 0";
+        document.getElementById("riskOut").textContent = "--";
+        document.getElementById("stopOut").textContent = "单股风险 -- / 止损价 --";
+        document.getElementById("rrOut").textContent = "--";
+        document.getElementById("targetOut").textContent = "目标价 -- / 单股收益 --";
+        document.getElementById("maxLossOut").textContent = "--";
+        document.getElementById("riskSharesOut").textContent = "--";
+        document.getElementById("capitalSharesOut").textContent = "--";
+        document.getElementById("planOut").textContent = "等待输入有效参数";
+        document.getElementById("decisionOut").textContent = "等待输入有效参数";
+        document.getElementById("timeline").innerHTML = timelineRow("未计算", "请输入有效的买入价、总资本和风控参数。");
+        return;
+      }
+
+      const validPlan = stopPrice < buyPrice && targetPrice > buyPrice;
+      const maxLoss = capital * riskPct;
+      const riskPerShare = buyPrice - stopPrice;
+      const rewardPerShare = targetPrice - buyPrice;
+      const rr = rewardPerShare / riskPerShare;
+      const riskSharesRaw = maxLoss / riskPerShare;
+      const riskShares = floorLot(riskSharesRaw, lotSize);
+      const capitalSharesRaw = capital / buyPrice;
+      const capitalShares = floorLot(capitalSharesRaw, lotSize);
+      const shares = validPlan ? Math.max(0, Math.min(riskShares, capitalShares)) : 0;
+      const positionCost = shares * buyPrice;
+      const actualRisk = shares * riskPerShare;
+      const actualReward = shares * rewardPerShare;
+
+      let decision = "可按建议仓位执行。";
+      let planText = "计划结构合理：止损低于买入，目标高于买入。";
+
+      if (!validPlan) {
+        planText = "计划不合格：做多计划要求止损价低于买入价，目标价高于买入价。";
+        decision = "请先修正交易计划，再计算仓位。";
+      } else if (shares === 0) {
+        decision = "当前参数下无法形成至少一手仓位，请调小止损比例或提高资本。";
+      } else if (riskShares < capitalShares) {
+        decision = "本次仓位受风险上限约束，先保护本金。";
+      } else if (capitalShares < riskShares) {
+        decision = "本次仓位受资金约束，资金不足以打满风险额度。";
+      }
+
+      document.getElementById("sharesOut").textContent = `${shares.toLocaleString("zh-CN")} 股`;
+      document.getElementById("positionCostOut").textContent = `占用资金 ${fmtMoney(positionCost)} 元`;
+      document.getElementById("riskOut").textContent = `${fmtMoney(actualRisk)} 元`;
+      document.getElementById("stopOut").textContent = `单股风险 ${fmtPrice(riskPerShare)} / 止损价 ${fmtPrice(stopPrice)}`;
+      document.getElementById("rrOut").textContent = Number.isFinite(rr) ? rr.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "--";
+      document.getElementById("targetOut").textContent = `目标价 ${fmtPrice(targetPrice)} / 单股收益 ${fmtPrice(rewardPerShare)}`;
+      document.getElementById("maxLossOut").textContent = `${fmtMoney(maxLoss)} 元`;
+      document.getElementById("riskSharesOut").textContent = `${riskShares.toLocaleString("zh-CN")} 股`;
+      document.getElementById("capitalSharesOut").textContent = `${capitalShares.toLocaleString("zh-CN")} 股`;
+      document.getElementById("planOut").textContent = planText;
+      document.getElementById("decisionOut").textContent = decision;
+
+      document.getElementById("timeline").innerHTML = [
+        timelineRow("交易计划", `买入价 ${fmtPrice(buyPrice)} / 止损价 ${fmtPrice(stopPrice)} / 目标价 ${fmtPrice(targetPrice)}`),
+        timelineRow("风险约束", `账户允许本笔最多亏损 ${fmtMoney(maxLoss)} 元，单股风险 ${fmtPrice(riskPerShare)}`),
+        timelineRow("收益空间", `单股目标收益 ${fmtPrice(rewardPerShare)}，收益风险比 ${Number.isFinite(rr) ? rr.toFixed(2) : "--"}`),
+        timelineRow("整笔测算", `按建议股数计算，计划最大亏损 ${fmtMoney(actualRisk)} 元，计划目标收益 ${fmtMoney(actualReward)} 元`),
+      ].join("");
+    }
+
+    ids.forEach((id) => els[id].addEventListener("input", render));
+    render();
+  </script>
+</body>
+</html>
