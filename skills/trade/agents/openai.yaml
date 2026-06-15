@@ -1,0 +1,7 @@
+interface:
+  display_name: "Trade"
+  short_description: "A股尾盘选股、评分与交易日志记录"
+  default_prompt: "Use $trade to score A-share swing candidates, enforce the 14:30 tail-buy gate, analyze a held position for sell decisions, or append a structured buy/sell journal entry."
+
+policy:
+  allow_implicit_invocation: true
